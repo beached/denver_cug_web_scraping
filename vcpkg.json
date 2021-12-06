@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+  "name": "denver_cug_web_scraping",
+  "version": "0.1.0",
+  "dependencies": [
+    "boost-asio",
+    "boost-filesystem",
+    "boost-regex",
+    "boost-system",
+    "gumbo",
+    {
+      "name": "curl",
+      "features": [
+        "ssl"
+      ]
+    }
+  ]
+}
