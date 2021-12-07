@@ -10,6 +10,7 @@ find_package(Boost REQUIRED COMPONENTS system thread)
 
 include_directories( include/)
 add_executable(${PROJECT_NAME} src/main.cpp)
+target_link_directories( ${PROJECT_NAME} PRIVATE ${GUMBO_LIBRARY_DIRS} )
 
 target_link_libraries(
         ${PROJECT_NAME}
@@ -18,7 +19,6 @@ target_link_libraries(
         daw::daw-header-libraries
         daw::daw-curl-wrapper
         daw::daw-utf-range
-        daw::parallel
         Boost::boost
         daw::daw-gumbo-pp
 )
