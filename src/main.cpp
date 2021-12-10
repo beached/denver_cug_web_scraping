@@ -6,10 +6,15 @@
 // Official repository: https://github.com/beached/denver_cug_web_scraping
 //
 
+#include <daw/curl_wrapper.h>
 #include <daw/daw_algorithm.h>
 #include <daw/daw_memory_mapped_file.h>
 #include <daw/daw_string_view.h>
+#include <daw/daw_unreachable.h>
 #include <daw/gumbo_pp.h>
+#include <daw/iterator/daw_find_iterator.h>
+#include <daw/iterator/daw_find_one_iterator.h>
+#include <daw/json/daw_json_link.h>
 
 #include <algorithm>
 #include <cassert>
@@ -27,16 +32,16 @@ void enumerate_all_div_tags( daw::gumbo::gumbo_range &doc_range,
 	  doc_range.end( ),
 	  match::tag::DIV,
 	  [&]( GumboNode const &node ) {
-		  std::cout << "  ***** div " << (count++) << " *****\n";
+		  std::cout << "  ***** div " << ( count++ ) << " *****\n";
 		  std::cout << daw::gumbo::node_inner_text( node, html_doc ) << '\n';
-			std::cout << "  *****\n";
+		  std::cout << "  *****\n";
 	  } );
 	std::cout << "*****\n";
 }
 
 template<typename Keywords>
 void find_all_links_with_keywords( daw::gumbo::gumbo_range &doc_range,
-                                  Keywords && keywords ) {
+                                   Keywords &&keywords ) {
 	std::cout << "***** find_all_links_with_keywords *****\n";
 	daw::algorithm::for_each_if(
 	  doc_range.begin( ),
@@ -65,6 +70,63 @@ void find_all_p_tags_with_id( daw::gumbo::gumbo_range &doc_range,
 	std::cout << "*****\n";
 }
 
+struct Item {
+	std::string title;
+	std::string url;
+	std::string price;
+};
+
+namespace daw::json {
+	template<>
+	struct json_data_contract<Item> {
+		static constexpr char const title[] = "title";
+		static constexpr char const url[] = "url";
+		static constexpr char const price[] = "price";
+		using type = json_member_list<json_string<title>,
+		                              json_string<url>,
+		                              json_string<price>>;
+
+		static inline auto to_json_data( Item const &value ) {
+			return std::forward_as_tuple( value.title, value.url, value.price );
+		}
+	};
+} // namespace daw::json
+
+void find_all_iphone13s( ) {
+	auto crl = daw::curl_wrapper( );
+	auto doc = crl.get_string( "https://www.newegg.ca/p/pl?d=iphone+13+pro" );
+	auto doc_range = daw::gumbo::gumbo_range( doc );
+
+	std::vector<Item> items{ };
+	for( auto const &parent_node :
+	     daw::find_iterator( doc_range.begin( ),
+	                         match::class_type::is( "item-container" ) ) ) {
+		auto child_range = daw::gumbo::gumbo_child_range( parent_node );
+		auto child_filter_range = daw::find_one_iterator(
+		  child_range.begin( ),
+		  child_range.end( ),
+		  match::tag::A and match::class_type::is( "item-title" ),
+		  match::tag::LI and match::class_type::is( "price-current " ) );
+		Item item{ };
+		bool found = false;
+		for( auto elem : child_filter_range ) {
+			found = true;
+			switch( elem.index ) {
+			case 0:
+				item.url = static_cast<std::string_view>(
+				  daw::gumbo::node_attribute_value( elem.value, "href" ) );
+				item.title = daw::gumbo::node_content_text( elem.value );
+				break;
+			case 1:
+				item.price = daw::gumbo::node_content_text( elem.value );
+				items.push_back( DAW_MOVE( item ) );
+				break;
+			}
+		}
+	}
+	std::cout << daw::json::to_json( items ) << '\n';
+}
+
 inline constexpr daw::string_view html_doc = R"html(
 <html>
 <head>
@@ -88,4 +150,5 @@ int main( ) {
 	enumerate_all_div_tags( doc_range, html_doc );
 	find_all_links_with_keywords( doc_range, std::vector{ "foo"sv } );
 	find_all_p_tags_with_id( doc_range, "foo" );
+	find_all_iphone13s( );
 }
