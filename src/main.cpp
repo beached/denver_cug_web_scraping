@@ -27,15 +27,13 @@ void enumerate_all_div_tags( daw::gumbo::gumbo_range &doc_range,
                              daw::string_view html_doc ) {
 	std::cout << "***** enumerate_all_div_tags *****\n";
 	int count = 0;
-	daw::algorithm::for_each_if(
-	  doc_range.begin( ),
-	  doc_range.end( ),
-	  match::tag::DIV,
-	  [&]( GumboNode const &node ) {
-		  std::cout << "  ***** div " << ( count++ ) << " *****\n";
-		  std::cout << daw::gumbo::node_inner_text( node, html_doc ) << '\n';
-		  std::cout << "  *****\n";
-	  } );
+	for( auto const &node : daw::find_iterator( doc_range.begin( ),
+	                                            doc_range.end( ),
+	                                            match::tag::DIV ) ) {
+		std::cout << "  ***** div " << ( count++ ) << " *****\n";
+		std::cout << daw::gumbo::node_inner_text( node, html_doc ) << '\n';
+		std::cout << "  *****\n";
+	}
 	std::cout << "*****\n";
 }
 
@@ -43,30 +41,28 @@ template<typename Keywords>
 void find_all_links_with_keywords( daw::gumbo::gumbo_range &doc_range,
                                    Keywords &&keywords ) {
 	std::cout << "***** find_all_links_with_keywords *****\n";
-	daw::algorithm::for_each_if(
-	  doc_range.begin( ),
-	  doc_range.end( ),
-	  match::tag::A and match::attribute::value::starts_with( "href", "http" ) and
-	    match::content_text::contains( keywords ),
-	  []( GumboNode const &node ) {
-		  std::cout << "[" << daw::gumbo::node_content_text( node ) << ']';
-		  std::cout << "(" << daw::gumbo::node_attribute_value( node, "href" )
-		            << ")\n";
-	  } );
+	for( auto const &node : daw::find_iterator(
+	       doc_range.begin( ),
+	       doc_range.end( ),
+	       match::tag::A and
+	         match::attribute::value::starts_with( "href", "http" ) and
+	         match::content_text::contains( keywords ) ) ) {
+		std::cout << "[" << daw::gumbo::node_content_text( node ) << ']';
+		std::cout << "(" << daw::gumbo::node_attribute_value( node, "href" )
+		          << ")\n";
+	}
 	std::cout << "*****\n";
 }
 
 void find_all_p_tags_with_id( daw::gumbo::gumbo_range &doc_range,
                               daw::string_view id ) {
 	std::cout << "***** find_all_p_tags_with_id *****\n";
-	daw::algorithm::for_each_if( doc_range.begin( ),
-	                             doc_range.end( ),
-	                             match::tag::P and match::id::is( id ),
-	                             []( GumboNode const &node ) {
-		                             std::cout
-		                               << daw::gumbo::node_content_text( node )
-		                               << '\n';
-	                             } );
+	for( auto const &node :
+	     daw::find_iterator( doc_range.begin( ),
+	                         doc_range.end( ),
+	                         match::tag::P and match::id::is( id ) ) ) {
+		std::cout << daw::gumbo::node_content_text( node ) << '\n';
+	}
 	std::cout << "*****\n";
 }
 
@@ -108,9 +104,7 @@ void find_all_iphone13s( ) {
 		  match::tag::A and match::class_type::is( "item-title" ),
 		  match::tag::LI and match::class_type::is( "price-current " ) );
 		Item item{ };
-		bool found = false;
 		for( auto elem : child_filter_range ) {
-			found = true;
 			switch( elem.index ) {
 			case 0:
 				item.url = static_cast<std::string_view>(
